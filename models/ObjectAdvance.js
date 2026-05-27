@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const incomeSchema = new mongoose.Schema(
+const objectAdvanceSchema = new mongoose.Schema(
   {
     objectId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -9,13 +9,8 @@ const incomeSchema = new mongoose.Schema(
     },
     amount: {
       type: Number,
-      required: [true, 'Сумма обязательна'],
+      required: [true, 'Сумма аванса обязательна'],
       min: 0
-    },
-    status: {
-      type: String,
-      default: 'Ожидается',
-      trim: true
     },
     date: {
       type: Date,
@@ -23,14 +18,20 @@ const incomeSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      default: 'Наличные'
+      default: 'Наличные',
+      trim: true
+    },
+    status: {
+      type: String,
+      default: 'Получен',
+      trim: true
     },
     comment: {
       type: String,
       default: ''
     }
   },
-  { timestamps: true, collection: 'incomes' }
+  { timestamps: true, collection: 'objectAdvances' }
 );
 
-module.exports = mongoose.model('Income', incomeSchema);
+module.exports = mongoose.model('ObjectAdvance', objectAdvanceSchema);

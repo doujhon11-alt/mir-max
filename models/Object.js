@@ -28,8 +28,8 @@ const objectSchema = new mongoose.Schema(
     deadline: Date,
     status: {
       type: String,
-      enum: ['active', 'completed', 'paused', 'canceled'],
-      default: 'active'
+      default: 'В работе',
+      trim: true
     },
     comment: {
       type: String,

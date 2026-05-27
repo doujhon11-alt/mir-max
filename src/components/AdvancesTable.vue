@@ -2,72 +2,67 @@
   <div class="panel">
     <div class="section-header">
       <div>
-        <h2 class="section-title">Доходы</h2>
-        <p class="section-subtitle">Полученные и ожидаемые платежи по объектам</p>
+        <h2 class="section-title">Авансы по объектам</h2>
+        <p class="section-subtitle">Авансы увеличивают полученные деньги только в статусах Получен или Учтён</p>
       </div>
-      <button type="button" class="btn-primary" @click="openCreate"><Plus class="h-4 w-4" />Добавить доход</button>
+      <button type="button" class="btn-primary" @click="openCreate"><Plus class="h-4 w-4" />Добавить аванс</button>
     </div>
 
     <div v-if="error" class="error-box">{{ error }}</div>
     <div class="table-toolbar">
-      <input v-model="search" class="search-input" placeholder="Поиск по объекту, сумме, способу оплаты" />
+      <input v-model="search" class="search-input" placeholder="Поиск по объекту, статусу, способу оплаты" />
       <select v-model="statusFilter" class="search-input md:max-w-48">
         <option value="">Все статусы</option>
-        <option value="Получено">Получено</option>
-        <option value="Ожидается">Ожидается</option>
+        <option v-for="status in statuses" :key="status" :value="status">{{ status }}</option>
       </select>
     </div>
 
-    <div v-if="loading" class="state-box">Загрузка доходов...</div>
-    <div v-else-if="!filteredIncomes.length" class="state-box">Пока нет данных. Добавьте первую запись или измените фильтр.</div>
+    <div v-if="loading" class="state-box">Загрузка авансов...</div>
+    <div v-else-if="!filteredAdvances.length" class="state-box">Пока нет данных. Добавьте первый аванс или измените фильтр.</div>
 
     <div v-else class="overflow-x-auto">
       <table class="data-table">
         <thead>
           <tr>
             <th>Объект</th>
-            <th>Сумма</th>
-            <th>Статус</th>
+            <th class="text-right">Сумма</th>
             <th>Дата</th>
             <th>Способ оплаты</th>
+            <th>Статус</th>
             <th class="text-right">Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="income in filteredIncomes" :key="income._id">
-            <td>{{ getObjectName(income.objectId) }}</td>
-            <td class="font-medium">{{ formatMoney(income.amount) }}</td>
-            <td>
-              <span class="badge" :class="income.status === 'Получено' ? 'badge-green' : 'badge-blue'">
-                {{ income.status }}
-              </span>
-            </td>
-            <td>{{ formatDate(income.date) }}</td>
-            <td>{{ income.paymentMethod || '-' }}</td>
+          <tr v-for="advance in filteredAdvances" :key="advance._id">
+            <td>{{ getObjectName(advance.objectId) }}</td>
+            <td class="text-right font-medium">{{ formatMoney(advance.amount) }}</td>
+            <td>{{ formatDate(advance.date) }}</td>
+            <td>{{ advance.paymentMethod || '-' }}</td>
+            <td><span class="badge" :class="statusClass(advance.status)">{{ advance.status }}</span></td>
             <td class="actions">
-              <button type="button" class="icon-btn" title="Редактировать" aria-label="Редактировать" @click="openEdit(income)"><Pencil class="h-4 w-4" /></button>
-              <button type="button" class="icon-btn-danger" title="Удалить" aria-label="Удалить" @click="deleteIncome(income._id)"><Trash2 class="h-4 w-4" /></button>
+              <button type="button" class="icon-btn" title="Редактировать" aria-label="Редактировать" @click="openEdit(advance)"><Pencil class="h-4 w-4" /></button>
+              <button type="button" class="icon-btn-danger" title="Удалить" aria-label="Удалить" @click="deleteAdvance(advance._id)"><Trash2 class="h-4 w-4" /></button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <BaseModal v-if="isModalOpen" :title="editingId ? 'Редактировать доход' : 'Добавить доход'" @close="closeModal">
-      <form class="form-grid" @submit.prevent="saveIncome">
+    <BaseModal v-if="isModalOpen" :title="editingId ? 'Редактировать аванс' : 'Добавить аванс'" @close="closeModal">
+      <form class="form-grid" @submit.prevent="saveAdvance">
         <label class="field">Объект *
           <select v-model="form.objectId" class="input" required>
             <option value="">Выберите объект</option>
             <option v-for="obj in objects" :key="obj._id" :value="obj._id">{{ obj.name }}</option>
           </select>
         </label>
-        <label class="field">Сумма *<input v-model.number="form.amount" class="input" type="number" min="0" required /></label>
-        <label class="field">Статус
-          <ManualSelect v-model="form.status" :options="incomeStatuses" placeholder="Выберите статус" manual-placeholder="Введите статус" />
-        </label>
+        <label class="field">Сумма аванса *<input v-model.number="form.amount" class="input" type="number" min="0" required /></label>
         <label class="field">Дата<input v-model="form.date" class="input" type="date" /></label>
-        <label class="field md:col-span-2">Способ оплаты
+        <label class="field">Способ оплаты
           <ManualSelect v-model="form.paymentMethod" :options="paymentMethods" placeholder="Выберите способ оплаты" manual-placeholder="Введите способ оплаты" />
+        </label>
+        <label class="field">Статус
+          <ManualSelect v-model="form.status" :options="statuses" placeholder="Выберите статус" manual-placeholder="Введите статус" />
         </label>
         <label class="field md:col-span-2">Комментарий<textarea v-model="form.comment" class="input" rows="3" /></label>
         <div class="modal-actions md:col-span-2">
@@ -89,7 +84,10 @@ import { formatDate, formatMoney, toNumber } from '../utils/format';
 
 const emit = defineEmits(['changed']);
 
-const incomes = ref([]);
+const statuses = ['Получен', 'Учтён', 'Возвращён', 'Отменён'];
+const defaultPaymentMethods = ['Наличные', 'Kaspi', 'Банк', 'Карта'];
+
+const advances = ref([]);
 const objects = ref([]);
 const selectOptions = ref([]);
 const search = ref('');
@@ -99,120 +97,96 @@ const saving = ref(false);
 const error = ref('');
 const isModalOpen = ref(false);
 const editingId = ref(null);
-const incomeStatuses = ['Получено', 'Ожидается'];
-const defaultPaymentMethods = ['Наличные', 'Kaspi', 'Банк', 'Карта'];
+
+const today = () => new Date().toISOString().split('T')[0];
+const emptyForm = () => ({ objectId: '', amount: 0, date: today(), paymentMethod: 'Наличные', status: 'Получен', comment: '' });
+const form = reactive(emptyForm());
+const resetForm = () => Object.assign(form, emptyForm());
+const toDateInput = (value) => value ? new Date(value).toISOString().split('T')[0] : '';
+
 const paymentMethods = computed(() => {
   const custom = selectOptions.value.filter(option => option.category === 'paymentMethod' && option.isActive).map(option => option.name);
   return Array.from(new Set([...defaultPaymentMethods, ...custom]));
 });
 
-const today = () => new Date().toISOString().split('T')[0];
-const emptyForm = () => ({
-  objectId: '',
-  amount: 0,
-  status: 'Получено',
-  date: today(),
-  paymentMethod: 'Наличные',
-  comment: ''
-});
-
-const form = reactive(emptyForm());
-
-const toDateInput = (value) => {
-  if (!value) return '';
-  return new Date(value).toISOString().split('T')[0];
-};
-
-const resetForm = () => Object.assign(form, emptyForm());
-
-const filteredIncomes = computed(() => {
+const filteredAdvances = computed(() => {
   const query = search.value.trim().toLowerCase();
-  return incomes.value.filter(income => {
-    const matchesStatus = !statusFilter.value || income.status === statusFilter.value;
-    const haystack = [getObjectName(income.objectId), income.amount, income.status, income.paymentMethod, income.comment]
+  return advances.value.filter(advance => {
+    const matchesStatus = !statusFilter.value || advance.status === statusFilter.value;
+    const haystack = [getObjectName(advance.objectId), advance.amount, advance.paymentMethod, advance.status, advance.comment]
       .map(value => String(value || '').toLowerCase()).join(' ');
     return matchesStatus && (!query || haystack.includes(query));
   });
 });
 
-const getObjectName = (objectId) => {
-  const obj = objects.value.find(o => String(o._id) === String(objectId));
-  return obj?.name || 'Неизвестный объект';
-};
+const getObjectName = (objectId) => objects.value.find(o => String(o._id) === String(objectId))?.name || 'Неизвестный объект';
+const statusClass = (status) => ({
+  'Получен': 'badge-green',
+  'Учтён': 'badge-blue',
+  'Возвращён': 'badge-yellow',
+  'Отменён': 'badge-red'
+}[status] || 'badge-gray');
 
 const loadData = async () => {
   loading.value = true;
   error.value = '';
   try {
-    const [incomesRes, objectsRes, optionsRes] = await Promise.all([
-      client.get('/api/incomes'),
+    const [advancesRes, objectsRes, optionsRes] = await Promise.all([
+      client.get('/api/object-advances'),
       client.get('/api/objects'),
       client.get('/api/select-options')
     ]);
-    incomes.value = incomesRes.data || [];
+    advances.value = advancesRes.data || [];
     objects.value = objectsRes.data || [];
     selectOptions.value = optionsRes.data || [];
   } catch (err) {
-    error.value = `Ошибка загрузки доходов: ${err.message}`;
+    error.value = `Ошибка загрузки авансов: ${err.message}`;
   } finally {
     loading.value = false;
   }
 };
 
-const openCreate = () => {
-  editingId.value = null;
-  resetForm();
-  isModalOpen.value = true;
-};
-
-const openEdit = (income) => {
-  editingId.value = income._id;
+const openCreate = () => { editingId.value = null; resetForm(); isModalOpen.value = true; };
+const openEdit = (advance) => {
+  editingId.value = advance._id;
   Object.assign(form, {
-    objectId: income.objectId || '',
-    amount: toNumber(income.amount),
-    status: income.status || 'Получено',
-    date: toDateInput(income.date),
-    paymentMethod: income.paymentMethod || '',
-    comment: income.comment || ''
+    objectId: advance.objectId || '',
+    amount: toNumber(advance.amount),
+    date: toDateInput(advance.date),
+    paymentMethod: advance.paymentMethod || 'Наличные',
+    status: advance.status || 'Получен',
+    comment: advance.comment || ''
   });
   isModalOpen.value = true;
 };
+const closeModal = () => { isModalOpen.value = false; editingId.value = null; resetForm(); };
 
-const closeModal = () => {
-  isModalOpen.value = false;
-  editingId.value = null;
-  resetForm();
-};
-
-const saveIncome = async () => {
+const saveAdvance = async () => {
   saving.value = true;
   error.value = '';
   try {
     const payload = { ...form, amount: toNumber(form.amount) };
-    if (editingId.value) {
-      await client.patch(`/api/incomes/${editingId.value}`, payload);
-    } else {
-      await client.post('/api/incomes', payload);
-    }
+    if (editingId.value) await client.patch(`/api/object-advances/${editingId.value}`, payload);
+    else await client.post('/api/object-advances', payload);
     closeModal();
     await loadData();
     emit('changed');
   } catch (err) {
-    error.value = `Ошибка сохранения дохода: ${err.message}`;
+    error.value = `Ошибка сохранения аванса: ${err.message}`;
   } finally {
     saving.value = false;
   }
 };
 
-const deleteIncome = async (id) => {
-  if (!confirm('Удалить доход?')) return;
+const deleteAdvance = async (id) => {
+  if (!confirm('Удалить аванс?')) return;
   error.value = '';
   try {
-    await client.delete(`/api/incomes/${id}`);
+    await client.delete(`/api/object-advances/${id}`);
     await loadData();
     emit('changed');
   } catch (err) {
-    error.value = `Ошибка удаления дохода: ${err.message}`;
+    error.value = `Ошибка удаления аванса: ${err.message}`;
   }
 };
 
@@ -240,7 +214,10 @@ onMounted(loadData);
 .state-box { @apply rounded border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500; }
 .error-box { @apply mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700; }
 .modal-actions { @apply flex justify-end gap-2 pt-2; }
-.badge { @apply rounded px-2 py-1 text-xs font-medium; }
+.badge { @apply rounded-full px-2.5 py-1 text-xs font-medium; }
 .badge-green { @apply bg-green-100 text-green-800; }
 .badge-blue { @apply bg-blue-100 text-blue-800; }
+.badge-yellow { @apply bg-yellow-100 text-yellow-800; }
+.badge-red { @apply bg-red-100 text-red-800; }
+.badge-gray { @apply bg-gray-100 text-gray-700; }
 </style>

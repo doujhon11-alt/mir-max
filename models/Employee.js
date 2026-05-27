@@ -25,6 +25,41 @@ const employeeSchema = new mongoose.Schema(
       enum: ['active', 'fired'],
       default: 'active'
     },
+    birthDate: Date,
+    iin: {
+      type: String,
+      trim: true
+    },
+    documentNumber: {
+      type: String,
+      trim: true
+    },
+    address: {
+      type: String,
+      trim: true
+    },
+    hireDate: Date,
+    fireDate: Date,
+    paymentMethod: {
+      type: String,
+      trim: true
+    },
+    bankName: {
+      type: String,
+      trim: true
+    },
+    cardNumber: {
+      type: String,
+      trim: true
+    },
+    emergencyContact: {
+      type: String,
+      trim: true
+    },
+    emergencyPhone: {
+      type: String,
+      trim: true
+    },
     comment: {
       type: String,
       default: ''
