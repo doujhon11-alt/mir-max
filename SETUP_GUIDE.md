@@ -107,6 +107,34 @@ npm run dev
 
 Frontend будет работать на `http://localhost:5173`
 
+### Netlify
+
+На Netlify обычный `server.js` не запускается как постоянный процесс. Для продакшена backend обернут в Netlify Function:
+
+```text
+netlify/functions/api.js
+```
+
+`netlify.toml` делает redirects:
+
+```text
+/api/*  -> /.netlify/functions/api/api/:splat
+/health -> /.netlify/functions/api/health
+/*      -> /index.html
+```
+
+В Netlify Environment Variables добавь:
+
+```env
+MONGODB_URI=mongodb+srv://USERNAME:PASSWORD@cluster0.xxxxx.mongodb.net/mirmax?retryWrites=true&w=majority&appName=Cluster0
+CLIENT_URL=https://your-site.netlify.app
+PERSONAL_API_KEY=your_secret_key
+VITE_API_URL=
+VITE_API_KEY=your_secret_key
+```
+
+`VITE_API_URL` на Netlify должен быть пустым, чтобы frontend ходил на относительные `/api/*` URL.
+
 ---
 
 ## 📊 Коллекции MongoDB

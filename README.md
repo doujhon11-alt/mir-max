@@ -59,6 +59,39 @@ Frontend: `http://localhost:5173`
 
 Backend: `http://localhost:5000`
 
+## Netlify
+
+Проект деплоится в одном репозитории:
+
+- frontend собирается командой `npm run build` в `dist`
+- backend на Netlify работает через `netlify/functions/api.js`
+- `server.js` используется только для локального запуска Express
+
+Netlify redirects в `netlify.toml` отправляют:
+
+```text
+/api/*  -> /.netlify/functions/api/api/:splat
+/health -> /.netlify/functions/api/health
+/*      -> /index.html
+```
+
+Для Netlify environment variables:
+
+```env
+MONGODB_URI=mongodb+srv://USERNAME:PASSWORD@cluster0.xxxxx.mongodb.net/mirmax?retryWrites=true&w=majority&appName=Cluster0
+CLIENT_URL=https://your-site.netlify.app
+PERSONAL_API_KEY=your_secret_key
+VITE_API_URL=
+VITE_API_KEY=your_secret_key
+```
+
+Локально в `.env.local` оставь:
+
+```env
+VITE_API_URL=http://localhost:5000
+VITE_API_KEY=your_secret_key
+```
+
 ## API
 
 Публичный healthcheck:
