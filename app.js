@@ -12,7 +12,6 @@ const debtsRoutes = require('./routes/debts');
 const app = express();
 
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-const API_KEY = process.env.PERSONAL_API_KEY || 'change_this_secret_key';
 const allowedOrigins = new Set([
   CLIENT_URL,
   'http://localhost:5173',
@@ -45,14 +44,6 @@ app.use((req, res, next) => {
   next();
 });
 
-const checkApiKey = (req, res, next) => {
-  const apiKey = req.headers['x-api-key'];
-  if (apiKey !== API_KEY) {
-    return res.status(403).json({ success: false, message: 'Неверный API ключ' });
-  }
-  next();
-};
-
 app.get('/health', (req, res) => {
   res.json({ success: true, status: 'ok', message: 'MIR MAX API работает' });
 });
@@ -76,13 +67,13 @@ app.get('/', (req, res) => {
   });
 });
 
-app.use('/api/objects', checkApiKey, objectsRoutes);
-app.use('/api/incomes', checkApiKey, incomesRoutes);
-app.use('/api/expenses', checkApiKey, expensesRoutes);
-app.use('/api/employees', checkApiKey, employeesRoutes);
-app.use('/api/salary-accruals', checkApiKey, salaryAccrualsRoutes);
-app.use('/api/salary-payments', checkApiKey, salaryPaymentsRoutes);
-app.use('/api/debts', checkApiKey, debtsRoutes);
+app.use('/api/objects', objectsRoutes);
+app.use('/api/incomes', incomesRoutes);
+app.use('/api/expenses', expensesRoutes);
+app.use('/api/employees', employeesRoutes);
+app.use('/api/salary-accruals', salaryAccrualsRoutes);
+app.use('/api/salary-payments', salaryPaymentsRoutes);
+app.use('/api/debts', debtsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

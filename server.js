@@ -13,7 +13,11 @@ if (!MONGODB_URI) {
 
 async function start() {
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 10000
+    });
     console.log('Подключено к MongoDB Atlas');
 
     app.listen(PORT, () => {

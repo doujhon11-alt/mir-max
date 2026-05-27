@@ -1,49 +1,49 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-const API_KEY = import.meta.env.VITE_API_KEY || 'change_this_secret_key';
+const API_URL = import.meta.env.VITE_API_URL || '';
+const API_KEY = import.meta.env.VITE_API_KEY;
 
-const client = {
-  async request(method, endpoint, data = null) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const options = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': API_KEY
-      }
-    };
-
-    if (data) {
-      options.body = JSON.stringify(data);
+async function request(path, options = {}) {
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      ...(options.headers || {})
     }
+  });
 
-    try {
-      const response = await fetch(url, options);
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`HTTP ${response.status}: ${text || response.statusText}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('API Error:', error);
-      throw error;
-    }
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${JSON.stringify(data)}`);
+  }
+
+  return data;
+}
+
+export const api = {
+  get(path) {
+    return request(path);
   },
 
-  async get(endpoint) {
-    return this.request('GET', endpoint);
+  post(path, body) {
+    return request(path, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
   },
 
-  async post(endpoint, data) {
-    return this.request('POST', endpoint, data);
+  patch(path, body) {
+    return request(path, {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    });
   },
 
-  async patch(endpoint, data) {
-    return this.request('PATCH', endpoint, data);
-  },
-
-  async delete(endpoint) {
-    return this.request('DELETE', endpoint);
+  delete(path) {
+    return request(path, {
+      method: 'DELETE'
+    });
   }
 };
 
-export default client;
+export default api;

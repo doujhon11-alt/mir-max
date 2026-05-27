@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const SalaryPayment = require('../models/SalaryPayment');
+const apiKeyAuth = require('../middleware/auth');
+
+router.use(apiKeyAuth);
 
 router.post('/', async (req, res) => {
   try {
