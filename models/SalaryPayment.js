@@ -12,14 +12,18 @@ const salaryPaymentSchema = new mongoose.Schema(
       required: [true, 'Сумма обязательна'],
       min: 0
     },
+    period: {
+      type: String,
+      default: 'Месяц'
+    },
     date: {
       type: Date,
       default: Date.now
     },
     paymentType: {
       type: String,
-      enum: ['Аванс', 'Зарплата'],
-      default: 'Зарплата'
+      default: 'Зарплата',
+      trim: true
     },
     comment: {
       type: String,
