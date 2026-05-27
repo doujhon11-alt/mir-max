@@ -14,8 +14,8 @@ const incomeSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      default: 'Ожидается',
-      trim: true
+      enum: ['Получено', 'Ожидается'],
+      default: 'Ожидается'
     },
     date: {
       type: Date,

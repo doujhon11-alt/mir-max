@@ -5,8 +5,7 @@ const expenseSchema = new mongoose.Schema(
     objectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Object',
-      default: null,
-      set: value => value || null
+      required: [true, 'ObjectId обязателен']
     },
     category: {
       type: String,

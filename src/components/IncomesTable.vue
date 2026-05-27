@@ -1,246 +1,138 @@
 <template>
-  <div class="panel">
-    <div class="section-header">
-      <div>
-        <h2 class="section-title">Доходы</h2>
-        <p class="section-subtitle">Полученные и ожидаемые платежи по объектам</p>
+  <div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-bold mb-4">Доходы</h2>
+
+    <form @submit.prevent="addIncome" class="mb-6 p-4 bg-gray-50 rounded">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <select v-model="form.objectId" class="input" required>
+          <option value="">Выберите объект</option>
+          <option v-for="obj in objects" :key="obj._id" :value="obj._id">{{ obj.name }}</option>
+        </select>
+        <input v-model.number="form.amount" placeholder="Сумма" type="number" class="input" required min="0" />
+        <select v-model="form.status" class="input">
+          <option value="Получено">Получено</option>
+          <option value="Ожидается">Ожидается</option>
+        </select>
+        <input v-model="form.date" type="date" class="input" />
+        <input v-model="form.paymentMethod" placeholder="Способ оплаты" class="input" />
+        <textarea v-model="form.comment" placeholder="Комментарий" class="input col-span-2" rows="2"></textarea>
+        <button type="submit" class="btn-primary col-span-2">Добавить доход</button>
       </div>
-      <button type="button" class="btn-primary" @click="openCreate"><Plus class="h-4 w-4" />Добавить доход</button>
-    </div>
+    </form>
 
-    <div v-if="error" class="error-box">{{ error }}</div>
-    <div class="table-toolbar">
-      <input v-model="search" class="search-input" placeholder="Поиск по объекту, сумме, способу оплаты" />
-      <select v-model="statusFilter" class="search-input md:max-w-48">
-        <option value="">Все статусы</option>
-        <option value="Получено">Получено</option>
-        <option value="Ожидается">Ожидается</option>
-      </select>
-    </div>
-
-    <div v-if="loading" class="state-box">Загрузка доходов...</div>
-    <div v-else-if="!filteredIncomes.length" class="state-box">Пока нет данных. Добавьте первую запись или измените фильтр.</div>
-
-    <div v-else class="overflow-x-auto">
-      <table class="data-table">
-        <thead>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-100">
           <tr>
-            <th>Объект</th>
-            <th>Сумма</th>
-            <th>Статус</th>
-            <th>Дата</th>
-            <th>Способ оплаты</th>
-            <th class="text-right">Действия</th>
+            <th class="p-3 text-left">Объект</th>
+            <th class="p-3 text-left">Сумма</th>
+            <th class="p-3 text-left">Статус</th>
+            <th class="p-3 text-left">Дата</th>
+            <th class="p-3 text-left">Действия</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="income in filteredIncomes" :key="income._id">
-            <td>{{ getObjectName(income.objectId) }}</td>
-            <td class="font-medium">{{ formatMoney(income.amount) }}</td>
-            <td>
-              <span class="badge" :class="income.status === 'Получено' ? 'badge-green' : 'badge-blue'">
-                {{ income.status }}
-              </span>
-            </td>
-            <td>{{ formatDate(income.date) }}</td>
-            <td>{{ income.paymentMethod || '-' }}</td>
-            <td class="actions">
-              <button type="button" class="icon-btn" title="Редактировать" aria-label="Редактировать" @click="openEdit(income)"><Pencil class="h-4 w-4" /></button>
-              <button type="button" class="icon-btn-danger" title="Удалить" aria-label="Удалить" @click="deleteIncome(income._id)"><Trash2 class="h-4 w-4" /></button>
+          <tr v-for="income in incomes" :key="income._id" class="border-t hover:bg-gray-50">
+            <td class="p-3">{{ getObjectName(income.objectId) }}</td>
+            <td class="p-3 font-medium">{{ formatCurrency(income.amount) }}</td>
+            <td class="p-3"><span class="badge" :class="income.status === 'Получено' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'">{{ income.status }}</span></td>
+            <td class="p-3">{{ formatDate(income.date) }}</td>
+            <td class="p-3">
+              <button @click="deleteIncome(income._id)" class="btn-danger-sm">Удалить</button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
-
-    <BaseModal v-if="isModalOpen" :title="editingId ? 'Редактировать доход' : 'Добавить доход'" @close="closeModal">
-      <form class="form-grid" @submit.prevent="saveIncome">
-        <label class="field">Объект *
-          <select v-model="form.objectId" class="input" required>
-            <option value="">Выберите объект</option>
-            <option v-for="obj in objects" :key="obj._id" :value="obj._id">{{ obj.name }}</option>
-          </select>
-        </label>
-        <label class="field">Сумма *<input v-model.number="form.amount" class="input" type="number" min="0" required /></label>
-        <label class="field">Статус
-          <ManualSelect v-model="form.status" :options="incomeStatuses" placeholder="Выберите статус" manual-placeholder="Введите статус" />
-        </label>
-        <label class="field">Дата<input v-model="form.date" class="input" type="date" /></label>
-        <label class="field md:col-span-2">Способ оплаты
-          <ManualSelect v-model="form.paymentMethod" :options="paymentMethods" placeholder="Выберите способ оплаты" manual-placeholder="Введите способ оплаты" />
-        </label>
-        <label class="field md:col-span-2">Комментарий<textarea v-model="form.comment" class="input" rows="3" /></label>
-        <div class="modal-actions md:col-span-2">
-          <button type="button" class="btn-secondary" @click="closeModal">Отмена</button>
-          <button type="submit" class="btn-primary" :disabled="saving">{{ saving ? 'Сохранение...' : 'Сохранить' }}</button>
-        </div>
-      </form>
-    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref, onMounted } from 'vue';
-import { Pencil, Plus, Trash2 } from '@lucide/vue';
+import { ref, reactive, onMounted } from 'vue';
 import client from '../api/client';
-import BaseModal from './BaseModal.vue';
-import ManualSelect from './ManualSelect.vue';
-import { formatDate, formatMoney, toNumber } from '../utils/format';
 
 const emit = defineEmits(['changed']);
 
 const incomes = ref([]);
 const objects = ref([]);
-const selectOptions = ref([]);
-const search = ref('');
-const statusFilter = ref('');
-const loading = ref(false);
-const saving = ref(false);
-const error = ref('');
-const isModalOpen = ref(false);
-const editingId = ref(null);
-const incomeStatuses = ['Получено', 'Ожидается'];
-const defaultPaymentMethods = ['Наличные', 'Kaspi', 'Банк', 'Карта'];
-const paymentMethods = computed(() => {
-  const custom = selectOptions.value.filter(option => option.category === 'paymentMethod' && option.isActive).map(option => option.name);
-  return Array.from(new Set([...defaultPaymentMethods, ...custom]));
-});
-
-const today = () => new Date().toISOString().split('T')[0];
-const emptyForm = () => ({
+const form = reactive({
   objectId: '',
   amount: 0,
   status: 'Получено',
-  date: today(),
+  date: new Date().toISOString().split('T')[0],
   paymentMethod: 'Наличные',
   comment: ''
 });
 
-const form = reactive(emptyForm());
-
-const toDateInput = (value) => {
-  if (!value) return '';
-  return new Date(value).toISOString().split('T')[0];
+const formatCurrency = (value) => {
+  const num = Number(value) || 0;
+  return new Intl.NumberFormat('ru-KZ', { style: 'currency', currency: 'KZT', minimumFractionDigits: 0 }).format(num);
 };
 
-const resetForm = () => Object.assign(form, emptyForm());
-
-const filteredIncomes = computed(() => {
-  const query = search.value.trim().toLowerCase();
-  return incomes.value.filter(income => {
-    const matchesStatus = !statusFilter.value || income.status === statusFilter.value;
-    const haystack = [getObjectName(income.objectId), income.amount, income.status, income.paymentMethod, income.comment]
-      .map(value => String(value || '').toLowerCase()).join(' ');
-    return matchesStatus && (!query || haystack.includes(query));
-  });
-});
+const formatDate = (date) => {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('ru-KZ');
+};
 
 const getObjectName = (objectId) => {
-  const obj = objects.value.find(o => String(o._id) === String(objectId));
+  const obj = objects.value.find(o => o._id === objectId);
   return obj?.name || 'Неизвестный объект';
 };
 
 const loadData = async () => {
-  loading.value = true;
-  error.value = '';
   try {
-    const [incomesRes, objectsRes, optionsRes] = await Promise.all([
+    const [incomesRes, objectsRes] = await Promise.all([
       client.get('/api/incomes'),
-      client.get('/api/objects'),
-      client.get('/api/select-options')
+      client.get('/api/objects')
     ]);
     incomes.value = incomesRes.data || [];
     objects.value = objectsRes.data || [];
-    selectOptions.value = optionsRes.data || [];
-  } catch (err) {
-    error.value = `Ошибка загрузки доходов: ${err.message}`;
-  } finally {
-    loading.value = false;
+  } catch (error) {
+    console.error('Ошибка загрузки:', error);
   }
 };
 
-const openCreate = () => {
-  editingId.value = null;
-  resetForm();
-  isModalOpen.value = true;
-};
-
-const openEdit = (income) => {
-  editingId.value = income._id;
-  Object.assign(form, {
-    objectId: income.objectId || '',
-    amount: toNumber(income.amount),
-    status: income.status || 'Получено',
-    date: toDateInput(income.date),
-    paymentMethod: income.paymentMethod || '',
-    comment: income.comment || ''
-  });
-  isModalOpen.value = true;
-};
-
-const closeModal = () => {
-  isModalOpen.value = false;
-  editingId.value = null;
-  resetForm();
-};
-
-const saveIncome = async () => {
-  saving.value = true;
-  error.value = '';
+const addIncome = async () => {
   try {
-    const payload = { ...form, amount: toNumber(form.amount) };
-    if (editingId.value) {
-      await client.patch(`/api/incomes/${editingId.value}`, payload);
-    } else {
-      await client.post('/api/incomes', payload);
-    }
-    closeModal();
+    await client.post('/api/incomes', form);
+    form.amount = 0;
+    form.comment = '';
     await loadData();
     emit('changed');
-  } catch (err) {
-    error.value = `Ошибка сохранения дохода: ${err.message}`;
-  } finally {
-    saving.value = false;
+  } catch (error) {
+    console.error('Ошибка добавления:', error);
   }
 };
 
 const deleteIncome = async (id) => {
-  if (!confirm('Удалить доход?')) return;
-  error.value = '';
-  try {
-    await client.delete(`/api/incomes/${id}`);
-    await loadData();
-    emit('changed');
-  } catch (err) {
-    error.value = `Ошибка удаления дохода: ${err.message}`;
+  if (confirm('Вы уверены?')) {
+    try {
+      await client.delete(`/api/incomes/${id}`);
+      await loadData();
+      emit('changed');
+    } catch (error) {
+      console.error('Ошибка удаления:', error);
+    }
   }
 };
 
-onMounted(loadData);
+onMounted(() => loadData());
 </script>
 
 <style scoped>
-.panel { @apply bg-white rounded-lg shadow p-6; }
-.section-header { @apply mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between; }
-.section-title { @apply text-xl font-bold text-gray-900; }
-.section-subtitle { @apply text-sm text-gray-500; }
-.table-toolbar { @apply mb-4 flex flex-col gap-2 md:flex-row; }
-.search-input { @apply w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500; }
-.form-grid { @apply grid grid-cols-1 gap-4 md:grid-cols-2; }
-.field { @apply flex flex-col gap-1 text-sm font-medium text-gray-700; }
-.input { @apply rounded border border-gray-300 px-3 py-2 text-sm font-normal focus:outline-none focus:ring-2 focus:ring-blue-500; }
-.btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60; }
-.btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50; }
-.icon-btn { @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500; }
-.icon-btn-danger { @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500; }
-.data-table { @apply w-full text-sm; }
-.data-table th { @apply bg-gray-100 p-3 text-left font-medium text-gray-600; }
-.data-table td { @apply border-t p-3 text-gray-800; }
-.actions { @apply flex justify-end gap-2; }
-.state-box { @apply rounded border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500; }
-.error-box { @apply mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700; }
-.modal-actions { @apply flex justify-end gap-2 pt-2; }
-.badge { @apply rounded px-2 py-1 text-xs font-medium; }
-.badge-green { @apply bg-green-100 text-green-800; }
-.badge-blue { @apply bg-blue-100 text-blue-800; }
+.input {
+  @apply px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500;
+}
+
+.btn-primary {
+  @apply px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition;
+}
+
+.btn-danger-sm {
+  @apply px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700;
+}
+
+.badge {
+  @apply px-2 py-1 rounded text-xs font-medium;
+}
 </style>

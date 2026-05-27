@@ -8,10 +8,6 @@ const employeesRoutes = require('./routes/employees');
 const salaryAccrualsRoutes = require('./routes/salaryAccruals');
 const salaryPaymentsRoutes = require('./routes/salaryPayments');
 const debtsRoutes = require('./routes/debts');
-const employeeLoansRoutes = require('./routes/employeeLoans');
-const expenseTypesRoutes = require('./routes/expenseTypes');
-const objectAdvancesRoutes = require('./routes/objectAdvances');
-const selectOptionsRoutes = require('./routes/selectOptions');
 
 const app = express();
 
@@ -61,15 +57,11 @@ app.get('/', (req, res) => {
       'GET /health',
       '/api/objects',
       '/api/incomes',
-      '/api/object-advances',
       '/api/expenses',
-      '/api/expense-types',
       '/api/employees',
       '/api/salary-accruals',
       '/api/salary-payments',
-      '/api/debts',
-      '/api/select-options',
-      '/api/employee-loans'
+      '/api/debts'
     ],
     note: 'Все API endpoints требуют x-api-key в заголовке'
   });
@@ -77,15 +69,11 @@ app.get('/', (req, res) => {
 
 app.use('/api/objects', objectsRoutes);
 app.use('/api/incomes', incomesRoutes);
-app.use('/api/object-advances', objectAdvancesRoutes);
 app.use('/api/expenses', expensesRoutes);
-app.use('/api/expense-types', expenseTypesRoutes);
 app.use('/api/employees', employeesRoutes);
 app.use('/api/salary-accruals', salaryAccrualsRoutes);
 app.use('/api/salary-payments', salaryPaymentsRoutes);
 app.use('/api/debts', debtsRoutes);
-app.use('/api/select-options', selectOptionsRoutes);
-app.use('/api/employee-loans', employeeLoansRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
