@@ -1,59 +1,103 @@
-# Mir Max Private Netlify + Apps Script
+# MIR MAX
 
-Без Google Cloud и без кредитки.
+Веб-приложение для учета объектов, доходов, расходов, сотрудников, зарплаты и долгов.
 
-## Схема
+## Стек
 
-Netlify сайт -> Netlify Functions -> Apps Script API -> Google Sheets.
+- Frontend: Vue 3, Composition API, JavaScript, Tailwind CSS, Vite
+- Backend: Node.js, Express, Mongoose, MongoDB Atlas
+- Защита API: header `x-api-key`
 
-## Установка Apps Script
+## Архитектура
 
-1. Google Таблица -> Расширения -> Apps Script.
-2. Вставь `apps-script/Code.gs`.
-3. В начале файла замени:
+MongoDB хранит только сырые данные. Расчетные значения считаются на frontend в `src/composables/useFinanceStats.js`:
 
-```js
-apiToken: 'PASTE_SAME_TOKEN_HERE'
-```
+- доходы получено/ожидается
+- расходы `quantity * price`
+- прибыль и маржа по объекту
+- долг по зарплате
+- остаток долга сотрудника
+- итоги dashboard
 
-на:
+## Запуск
 
-```text
-bc0d08931aafdf815b2cbd4238a68c1288eca52946c65902
-```
-
-4. Deploy -> New deployment -> Web app.
-5. Execute as: Me.
-6. Who has access: Anyone.
-7. Deploy и скопируй Web App URL.
-
-## Netlify Environment Variables
-
-В Netlify -> Project configuration -> Environment variables добавь:
-
-```env
-ADMIN_PASSWORD=твой_пароль_для_сайта
-SESSION_SECRET=f7434e38903b655ab9bac1c312d15972612bb99cb5a282bea0ebacbe9952b196
-APPS_SCRIPT_URL=твой_Web_App_URL_из_Apps_Script
-APPS_SCRIPT_TOKEN=bc0d08931aafdf815b2cbd4238a68c1288eca52946c65902
-```
-
-`APPS_SCRIPT_TOKEN` должен совпадать с `apiToken` в Code.gs.
-
-## Deploy
-
-Залей эти файлы в GitHub репозиторий, который подключен к Netlify:
+1. Установить зависимости:
 
 ```bash
-git add .
-git commit -m "Add private Mir Max app"
-git push
+npm install
 ```
 
-Потом открой сайт: `https://mir-max.netlify.app`.
+2. Создать backend env:
 
-## Почему это безопасно
+```bash
+cp .env.example .env
+```
 
-- Пароль проверяется на Netlify Function, не в браузере.
-- Apps Script принимает запросы только с секретным token.
-- Google таблица может оставаться закрытой в твоем Google Drive.
+3. Создать frontend env:
+
+```bash
+cp .env.frontend.example .env.local
+```
+
+4. В `.env` указать MongoDB Atlas URI и `PERSONAL_API_KEY`.
+
+5. В `.env.local` указать такой же ключ в `VITE_API_KEY`.
+
+6. Запустить backend:
+
+```bash
+npm run dev:backend
+```
+
+7. Во втором терминале запустить frontend:
+
+```bash
+npm run dev
+```
+
+Frontend: `http://localhost:5173`
+
+Backend: `http://localhost:5000`
+
+## API
+
+Публичный healthcheck:
+
+```text
+GET /health
+```
+
+CRUD endpoints, все требуют `x-api-key`:
+
+```text
+/api/objects
+/api/incomes
+/api/expenses
+/api/employees
+/api/salary-accruals
+/api/salary-payments
+/api/debts
+```
+
+Для каждого endpoint доступны:
+
+```text
+POST /
+GET /
+GET /:id
+PATCH /:id
+DELETE /:id
+```
+
+## Проверка
+
+```bash
+curl http://localhost:5000/api/objects \
+  -H "x-api-key: your_secret_key"
+```
+
+Без ключа API должен вернуть:
+
+```json
+{"success":false,"message":"Неверный API ключ"}
+```

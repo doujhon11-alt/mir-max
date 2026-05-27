@@ -1,1 +1,0 @@
-const{clear,json}=require('./_auth');exports.handler=async()=>json(200,{ok:true},{'Set-Cookie':clear()});

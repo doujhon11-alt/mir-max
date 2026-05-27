@@ -1,1 +1,0 @@
-const{verify,json}=require('./_auth');exports.handler=async(e)=>verify(e)?json(200,{ok:true}):json(401,{ok:false});
