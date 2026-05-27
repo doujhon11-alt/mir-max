@@ -1,5 +1,8 @@
-.env
-.env.*
 node_modules
+.env
+.env.local
+.env.production
 .netlify
 .DS_Store
+
+!.env.example
